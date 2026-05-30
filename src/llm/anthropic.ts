@@ -42,7 +42,8 @@ export const anthropicProvider: LLMProvider = {
     ]
 
     let full = ''
-    const stream = c.messages.stream({ model: p.model, max_tokens: 2048, system, messages })
+    // max_tokens 给足：若端点默认开了 thinking，思考也吃这份额度，太小会被截断。
+    const stream = c.messages.stream({ model: p.model, max_tokens: 4096, system, messages })
     stream.on('text', (t) => {
       full += t
       p.onDelta(t)
@@ -53,12 +54,15 @@ export const anthropicProvider: LLMProvider = {
 
   async runObserver(p): Promise<ObserverResult | null> {
     const c = client(p.apiKey, p.baseURL)
+    // tool_choice 用 auto，不强制具体工具：开了 thinking 的模型不支持强制 tool_choice
+    // （会报 400 Thinking mode does not support this tool_choice）。靠 prompt 里
+    // "只调用 update_map" 的硬指令来保证它仍然会调。max_tokens 给足以容纳 thinking。
     const resp = await c.messages.create({
       model: p.model,
-      max_tokens: 2048,
+      max_tokens: 4096,
       system: OBSERVER_SYSTEM,
       tools: [TOOL],
-      tool_choice: { type: 'tool', name: UPDATE_MAP_NAME },
+      tool_choice: { type: 'auto' },
       messages: [{ role: 'user', content: observerUserContent(p) }],
     })
     const block = resp.content.find((b) => b.type === 'tool_use')
