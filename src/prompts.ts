@@ -50,13 +50,15 @@ export const OBSERVER_SYSTEM = `你是一个潜在的观察者。你不和用户
 
 只调用 update_map，不要输出其它任何文字。`
 
-// 观察者的结构化输出契约（tool schema）。校验在 tool-call 层，纯 JS 就能跑。
-export const UPDATE_MAP_TOOL = {
-  name: 'update_map',
-  description: '更新当前这一层子图的解读：长出的概念点、横切连接、可探索方向、以及是否该收拢。',
-  input_schema: {
-    type: 'object' as const,
-    properties: {
+// 观察者的结构化输出契约。校验在 tool-call 层，纯 JS 就能跑。
+// 同一份 JSON schema 喂给两种 API：Anthropic 的 input_schema、OpenAI 的 function.parameters。
+export const UPDATE_MAP_NAME = 'update_map'
+export const UPDATE_MAP_DESCRIPTION =
+  '更新当前这一层子图的解读：长出的概念点、横切连接、可探索方向、以及是否该收拢。'
+
+export const UPDATE_MAP_SCHEMA = {
+  type: 'object' as const,
+  properties: {
       nodes: {
         type: 'array',
         description: '这一层对话里真正冒出来的概念点。只放实际出现过的，不要预生成。',
@@ -120,7 +122,6 @@ export const UPDATE_MAP_TOOL = {
         },
         required: ['should', 'reason', 'question'],
       },
-    },
-    required: ['nodes', 'crossLinks', 'directions', 'collapse'],
   },
-}
+  required: ['nodes', 'crossLinks', 'directions', 'collapse'],
+} as const

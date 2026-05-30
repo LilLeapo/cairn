@@ -98,13 +98,17 @@ export async function loadSettings(): Promise<Settings | null> {
   const d = await db()
   const apiKey = (await d.get('settings', 'apiKey')) as string | undefined
   if (!apiKey) return null
+  const provider = ((await d.get('settings', 'provider')) as Settings['provider']) || 'anthropic'
+  const baseURL = ((await d.get('settings', 'baseURL')) as string) || ''
   const teacherModel = ((await d.get('settings', 'teacherModel')) as string) || 'claude-sonnet-4-6'
   const observerModel = ((await d.get('settings', 'observerModel')) as string) || 'claude-sonnet-4-6'
-  return { apiKey, teacherModel, observerModel }
+  return { provider, baseURL, apiKey, teacherModel, observerModel }
 }
 
 export async function saveSettings(s: Settings): Promise<void> {
   const d = await db()
+  await d.put('settings', s.provider, 'provider')
+  await d.put('settings', s.baseURL, 'baseURL')
   await d.put('settings', s.apiKey, 'apiKey')
   await d.put('settings', s.teacherModel, 'teacherModel')
   await d.put('settings', s.observerModel, 'observerModel')

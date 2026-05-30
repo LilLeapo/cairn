@@ -60,7 +60,13 @@ export interface ObserverRead {
 }
 
 // 设置：BYOK —— 你自己的 key，存在本地，前端直连，从不上传。
+// 支持两种 API 形态 + 自定义 base URL，所以官方 / 第三方代理（OpenRouter、
+// DeepSeek、本地 Ollama/LM Studio…）都能接。
+export type Provider = 'anthropic' | 'openai'
+
 export interface Settings {
+  provider: Provider
+  baseURL: string // 留空 = 用该 provider 的官方地址；填了 = 第三方 / 代理 / 本地
   apiKey: string
   teacherModel: string
   observerModel: string

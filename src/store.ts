@@ -8,7 +8,7 @@ import type {
   DirectionSuggestion,
 } from './types'
 import * as db from './db'
-import { streamTeacher, runObserver, type PathStep } from './anthropic'
+import { streamTeacher, runObserver, type PathStep } from './llm'
 
 const ROOT_ID = 'root'
 
@@ -135,9 +135,7 @@ export const useStore = create<State>((set, get) => ({
     // 老师循环：流式回答
     let answer = ''
     try {
-      answer = await streamTeacher({
-        apiKey: settings.apiKey,
-        model: settings.teacherModel,
+      answer = await streamTeacher(settings, {
         path: toPathSteps(path),
         history: messages,
         userText: text,
@@ -162,9 +160,7 @@ export const useStore = create<State>((set, get) => ({
     // 观察者循环：解读这一层，让图生长，提方向，判断该不该收
     try {
       const children = await db.getChildren(currentId)
-      const result = await runObserver({
-        apiKey: settings.apiKey,
-        model: settings.observerModel,
+      const result = await runObserver(settings, {
         path: toPathSteps(get().path),
         childrenTitles: children.map((c) => c.title),
         history: newMessages,

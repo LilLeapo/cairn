@@ -108,6 +108,15 @@ Anthropic 支持浏览器直连 `api.anthropic.com`，CORS 能过、流式照常
 把 key 写死进客户端代码、再把页面**公开**出去——那任何访客都能扒走你的 key 替你发请求。
 本地自用、或 BYOK，都绕开了它。
 
+### Provider 可插拔
+老师本来就是"可替换"的，所以调模型抽成薄薄一层、按 provider 分发。两种接口形态、＋自定义 base URL：
+
+- **Anthropic**：官方 / 兼容 / 代理端点。
+- **OpenAI 兼容**：官方 OpenAI、OpenRouter、DeepSeek、本地 Ollama/LM Studio… 凡 OpenAI 协议皆可。
+
+观察者的结构化输出是同一份 JSON schema，喂给两边（Anthropic 的 `input_schema` / OpenAI 的 function `parameters`）。
+注意：浏览器直连要端点放行 CORS——第三方代理、本地基本都放行；官方 `api.openai.com` 默认不放行（那就是"上薄代理"的场景）。
+
 ### 为什么 local-first 是特性，不是将就
 那张图是**你理解的底片**，极私人。让它**永远不离开你的机器**，是产品的特性。
 之前担心的那点服务端逻辑（观察者输出的 JSON schema 校验之类）也都是**纯 JS 就能跑**，没有一行非得在服务器上。
