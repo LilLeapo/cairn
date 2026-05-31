@@ -47,9 +47,10 @@ export const openaiProvider: LLMProvider = {
     ]
 
     let full = ''
+    // max_tokens 给足：若端点（或它代理的底层模型）开了 thinking，思考也吃这份额度。
     const stream = await c.chat.completions.create({
       model: p.model,
-      max_tokens: 2048,
+      max_tokens: 4096,
       stream: true,
       messages,
     })
@@ -65,15 +66,18 @@ export const openaiProvider: LLMProvider = {
 
   async runObserver(p): Promise<ObserverResult | null> {
     const c = client(p.apiKey, p.baseURL)
+    // tool_choice 用 auto，不强制具体工具：若端点代理到开了 thinking 的模型，强制
+    // tool_choice 会被拒（400 Thinking mode does not support this tool_choice）。
+    // 靠 prompt 里"只调用 update_map"的硬指令保证它仍然会调。
     const resp = await c.chat.completions.create({
       model: p.model,
-      max_tokens: 2048,
+      max_tokens: 4096,
       messages: [
         { role: 'system', content: OBSERVER_SYSTEM },
         { role: 'user', content: observerUserContent(p) },
       ],
       tools: [TOOL],
-      tool_choice: { type: 'function', function: { name: UPDATE_MAP_NAME } },
+      tool_choice: 'auto',
     })
     const call = resp.choices[0]?.message?.tool_calls?.[0]
     if (!call || call.type !== 'function') return null
