@@ -23,9 +23,7 @@ export function App() {
         <div className="col-head">
           <Breadcrumb />
         </div>
-        <div className="col-body">
-          <GraphPanel />
-        </div>
+        <GraphPanel />
       </div>
       <Chat />
     </div>

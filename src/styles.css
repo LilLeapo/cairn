@@ -97,7 +97,57 @@ button {
   color: var(--muted);
 }
 
-/* ── 图面板 ── */
+/* ── 图面板（力导向图）── */
+.graph-wrap {
+  position: relative;
+  flex: 1;
+  min-height: 0;
+  overflow: hidden;
+  user-select: none;
+}
+.graph-wrap svg {
+  display: block;
+}
+.graph-empty {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  transform: translate(-50%, -50%);
+  text-align: center;
+  color: var(--muted);
+  font-size: 13px;
+  line-height: 1.7;
+  pointer-events: none;
+}
+.graph-legend {
+  position: absolute;
+  left: 12px;
+  bottom: 12px;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  flex-wrap: wrap;
+  font-size: 11px;
+  color: var(--muted);
+  pointer-events: none;
+}
+.graph-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+.graph-legend i {
+  width: 10px;
+  height: 10px;
+  border-radius: 999px;
+  border: 1.5px solid transparent;
+  display: inline-block;
+}
+.graph-legend .dim {
+  opacity: 0.7;
+}
+
+/* ── 旧卡片样式（保留，暂未使用）── */
 .node-card {
   background: var(--panel);
   border: 1px solid var(--line);
