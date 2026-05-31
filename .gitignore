@@ -8,3 +8,5 @@ dist-ssr
 
 # TS build info
 *.tsbuildinfo
+.codewhale/
+chat_export*.md

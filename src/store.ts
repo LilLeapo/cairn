@@ -43,6 +43,7 @@ interface State {
   setSettings: (s: Settings) => Promise<void>
   navigateTo: (id: string) => Promise<void>
   send: (text: string) => Promise<void>
+  runObserverLoop: (currentId: string, newMessages: Message[]) => Promise<void>
   applyDirection: (d: DirectionSuggestion, depthOverride?: 'subgraph' | 'inline') => Promise<void>
   collapseCurrent: (summary: string) => Promise<void>
   resetAll: () => Promise<void>
@@ -158,9 +159,15 @@ export const useStore = create<State>((set, get) => ({
     set({ messages: newMessages, streaming: null, thinking: true })
 
     // 观察者循环：解读这一层，让图生长，提方向，判断该不该收
+    void get().runObserverLoop(currentId, newMessages)
+  },
+
+  runObserverLoop: async (currentId: string, newMessages: Message[]) => {
+    // 观察者循环：解读这一层，让图生长，提方向，判断该不该收
+    const { settings } = get()
     try {
       const children = await db.getChildren(currentId)
-      const result = await runObserver(settings, {
+      const result = await runObserver(settings!, {
         path: toPathSteps(get().path),
         childrenTitles: children.map((c) => c.title),
         history: newMessages,

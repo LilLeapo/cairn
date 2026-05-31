@@ -4,6 +4,7 @@ import { KeyGate } from './components/KeyGate'
 import { Breadcrumb } from './components/Breadcrumb'
 import { GraphPanel } from './components/GraphPanel'
 import { Chat } from './components/Chat'
+import { ImportPanel } from './components/ImportPanel'
 
 export function App() {
   const ready = useStore((s) => s.ready)
@@ -22,6 +23,7 @@ export function App() {
       <div className="col">
         <div className="col-head">
           <Breadcrumb />
+          <ImportPanel />
         </div>
         <div className="col-body">
           <GraphPanel />
