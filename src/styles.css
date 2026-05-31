@@ -97,91 +97,120 @@ button {
   color: var(--muted);
 }
 
-/* ── 图面板（力导向图）── */
-.graph-wrap {
-  position: relative;
+/* ── 图面板（卡片看板 / MN4 式分块分区）── */
+.board {
   flex: 1;
   min-height: 0;
-  overflow: hidden;
-  user-select: none;
+  overflow-y: auto;
+  padding: 16px;
 }
-.graph-wrap svg {
-  display: block;
-}
-.graph-empty {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  transform: translate(-50%, -50%);
-  text-align: center;
-  color: var(--muted);
-  font-size: 13px;
-  line-height: 1.7;
-  pointer-events: none;
-}
-.graph-legend {
-  position: absolute;
-  left: 12px;
-  bottom: 12px;
+.board-head {
+  margin-bottom: 14px;
   display: flex;
-  align-items: center;
-  gap: 14px;
+  align-items: baseline;
+  gap: 10px;
   flex-wrap: wrap;
-  font-size: 11px;
+}
+.board-title {
+  font-size: 15px;
+  font-weight: 650;
+}
+.board-sub {
+  font-size: 12px;
   color: var(--muted);
-  pointer-events: none;
-}
-.graph-legend span {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-}
-.graph-legend i {
-  width: 10px;
-  height: 10px;
-  border-radius: 999px;
-  border: 1.5px solid transparent;
-  display: inline-block;
-}
-.graph-legend .dim {
-  opacity: 0.7;
 }
 
-/* ── 旧卡片样式（保留，暂未使用）── */
-.node-card {
-  background: var(--panel);
-  border: 1px solid var(--line);
-  border-left: 3px solid var(--empty-color);
-  border-radius: 8px;
-  padding: 10px 12px;
-  margin-bottom: 10px;
+/* 关联区：有关联的卡片圈进同一个圆角框，框头标关系，不画线 */
+.zone {
+  border: 1px solid var(--collapsed);
+  border-radius: 12px;
+  background: rgba(201, 162, 109, 0.06);
+  padding: 10px 12px 12px;
+  margin-bottom: 14px;
 }
-.node-card.explored {
-  border-left-color: var(--explored);
-}
-.node-card.collapsed {
-  border-left-color: var(--collapsed);
-}
-.node-card.empty {
-  border-left-color: var(--empty-color);
-  opacity: 0.85;
-}
-.node-title {
+.zone-head {
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 15px;
+  margin-bottom: 10px;
 }
-.node-title button {
-  background: none;
-  border: none;
-  color: var(--text);
-  font-size: 15px;
-  padding: 0;
-  text-align: left;
+.zone-tag {
+  font-size: 11px;
+  color: #0c1320;
+  background: var(--collapsed);
+  border-radius: 999px;
+  padding: 1px 8px;
+  font-weight: 600;
 }
-.node-title button:hover {
+.zone-rel {
+  font-size: 12px;
+  color: var(--collapsed);
+}
+.zone-cards {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.others {
+  margin-top: 4px;
+}
+.others-head {
+  font-size: 12px;
+  color: var(--muted);
+  margin-bottom: 10px;
+}
+
+/* 卡片 */
+.card {
+  background: var(--panel);
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--empty-color);
+  border-radius: 10px;
+  padding: 10px 12px;
+  width: 210px;
+  cursor: pointer;
+  transition: border-color 0.12s, transform 0.06s;
+}
+.card:hover {
+  border-color: var(--accent);
+  border-left-color: var(--accent);
+  transform: translateY(-1px);
+}
+.card.explored {
+  border-left-color: var(--explored);
+}
+.card.collapsed {
+  border-left-color: var(--collapsed);
+}
+.card.empty {
+  border-left-color: var(--empty-color);
+  border-style: dashed;
+  opacity: 0.9;
+}
+.card-title {
+  font-size: 14px;
+  font-weight: 600;
+  margin-bottom: 8px;
+  line-height: 1.4;
+}
+.card-meta {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+.card-drill {
+  font-size: 11px;
   color: var(--accent);
+  margin-left: auto;
+}
+.card-summary {
+  margin-top: 8px;
+  font-size: 12px;
+  color: var(--muted);
+  border-top: 1px dashed var(--line);
+  padding-top: 6px;
+  line-height: 1.5;
 }
 .badge {
   font-size: 11px;
@@ -197,24 +226,6 @@ button {
   color: var(--explored);
 }
 .badge.collapsed {
-  color: var(--collapsed);
-}
-.node-summary {
-  margin-top: 6px;
-  font-size: 13px;
-  color: var(--muted);
-  border-top: 1px dashed var(--line);
-  padding-top: 6px;
-}
-.links {
-  margin-top: 8px;
-  font-size: 12px;
-  color: var(--muted);
-}
-.link-line {
-  padding: 2px 0;
-}
-.link-label {
   color: var(--collapsed);
 }
 .hint {
