@@ -64,21 +64,49 @@ export function GraphPanel() {
   const linksRef = useRef<SimLink[]>([])
   const posRef = useRef<Map<string, { x: number; y: number }>>(new Map())
   const simRef = useRef<Simulation<SimNode, SimLink> | null>(null)
+  const sizeRef = useRef({ w: 600, h: 600 })
+  const needFitRef = useRef(true)
+  const prevLevelRef = useRef<string | null>(null)
   const [, setTick] = useState(0)
   const [size, setSize] = useState({ w: 600, h: 600 })
   const [view, setView] = useState({ x: 0, y: 0, k: 1 })
+  // 横切连接的标签默认不显示，点了那条线才显示。key = fromId::toId
+  const [shownLabels, setShownLabels] = useState<Set<string>>(new Set())
 
   // 跟随容器尺寸
   useEffect(() => {
     const el = wrapRef.current
     if (!el) return
-    const ro = new ResizeObserver(() => {
-      setSize({ w: el.clientWidth, h: el.clientHeight })
-    })
+    const apply = () => {
+      const s = { w: el.clientWidth, h: el.clientHeight }
+      sizeRef.current = s
+      setSize(s)
+    }
+    const ro = new ResizeObserver(apply)
     ro.observe(el)
-    setSize({ w: el.clientWidth, h: el.clientHeight })
+    apply()
     return () => ro.disconnect()
   }, [])
+
+  // 自动缩放，使整张图刚好框进视口（进入新一层时调用）
+  function fit() {
+    const ns = nodesRef.current.filter((n) => n.x != null && n.y != null)
+    if (!ns.length) return
+    const xs = ns.map((n) => n.x!)
+    const ys = ns.map((n) => n.y!)
+    const minX = Math.min(...xs)
+    const maxX = Math.max(...xs)
+    const minY = Math.min(...ys)
+    const maxY = Math.max(...ys)
+    const gw = maxX - minX || 1
+    const gh = maxY - minY || 1
+    const pad = 140 // 给节点下方的文字标签留白
+    const { w, h } = sizeRef.current
+    const k = Math.min(1.6, Math.max(0.3, Math.min(w / (gw + pad), h / (gh + pad))))
+    const cx = (minX + maxX) / 2
+    const cy = (minY + maxY) / 2
+    setView({ k, x: -cx * k, y: -cy * k })
+  }
 
   const current = allNodes.find((n) => n.id === currentId)
 
@@ -87,6 +115,12 @@ export function GraphPanel() {
   const linkIds = allLinks.map((l) => l.id).join(',')
   useEffect(() => {
     if (!current) return
+    // 进入新一层：标记需要自动 fit，并清掉上一层残留的标签显示
+    if (prevLevelRef.current !== current.id) {
+      needFitRef.current = true
+      prevLevelRef.current = current.id
+      setShownLabels(new Set())
+    }
     const visible = new Set([current.id, ...children.map((c) => c.id)])
     const hasKids = (id: string) => allNodes.some((n) => n.parentId === id)
 
@@ -138,19 +172,25 @@ export function GraphPanel() {
 
     simRef.current?.stop()
     const sim = forceSimulation<SimNode, SimLink>(nodes)
-      .force('charge', forceManyBody().strength(-520))
+      .force('charge', forceManyBody().strength(-950))
       .force(
         'link',
         forceLink<SimNode, SimLink>(links)
           .id((d) => d.id)
-          .distance((l) => (l.kind === 'cross' ? 150 : 120))
-          .strength((l) => (l.kind === 'cross' ? 0.25 : 0.7)),
+          .distance((l) => (l.kind === 'cross' ? 230 : 160))
+          .strength((l) => (l.kind === 'cross' ? 0.18 : 0.6)),
       )
       .force('center', forceCenter(0, 0))
-      .force('collide', forceCollide<SimNode>(54))
+      .force('collide', forceCollide<SimNode>(76))
       .on('tick', () => {
         for (const n of nodes) if (n.x != null && n.y != null) posRef.current.set(n.id, { x: n.x, y: n.y })
         setTick((t) => t + 1)
+      })
+      .on('end', () => {
+        if (needFitRef.current) {
+          needFitRef.current = false
+          fit()
+        }
       })
     simRef.current = sim
     return () => {
@@ -231,6 +271,16 @@ export function GraphPanel() {
     setView({ k, x: sx - wx * k, y: sy - wy * k })
   }
 
+  function toggleLabel(e: { stopPropagation(): void }, key: string) {
+    e.stopPropagation()
+    setShownLabels((prev) => {
+      const next = new Set(prev)
+      if (next.has(key)) next.delete(key)
+      else next.add(key)
+      return next
+    })
+  }
+
   const nodes = nodesRef.current
   const links = linksRef.current
   const byId = new Map(nodes.map((n) => [n.id, n]))
@@ -253,8 +303,27 @@ export function GraphPanel() {
             const a = resolve(l.source)
             const b = resolve(l.target)
             if (!a || !b || a.x == null || b.x == null) return null
+
+            // 层级边：低调的实线，不可点
+            if (l.kind !== 'cross') {
+              return (
+                <line
+                  key={i}
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke="#2c313a"
+                  strokeWidth={1}
+                />
+              )
+            }
+
+            // 横切边：标签默认隐藏，点中点小圆 / 点线 才显示
             const mx = (a.x! + b.x!) / 2
             const my = (a.y! + b.y!) / 2
+            const key = `${a.id}::${b.id}`
+            const shown = shownLabels.has(key)
             return (
               <g key={i}>
                 <line
@@ -262,12 +331,43 @@ export function GraphPanel() {
                   y1={a.y}
                   x2={b.x}
                   y2={b.y}
-                  stroke={l.kind === 'cross' ? '#c9a26d' : '#3a4150'}
-                  strokeWidth={l.kind === 'cross' ? 1.5 : 1}
-                  strokeDasharray={l.kind === 'cross' ? '4 3' : undefined}
+                  stroke="#c9a26d"
+                  strokeOpacity={shown ? 0.9 : 0.4}
+                  strokeWidth={shown ? 1.6 : 1.2}
+                  strokeDasharray="4 3"
                 />
-                {l.label && (
-                  <text x={mx} y={my - 3} fill="#c9a26d" fontSize={11} textAnchor="middle">
+                {/* 透明的加宽命中区，方便点中线 */}
+                <line
+                  x1={a.x}
+                  y1={a.y}
+                  x2={b.x}
+                  y2={b.y}
+                  stroke="transparent"
+                  strokeWidth={16}
+                  style={{ cursor: 'pointer' }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => toggleLabel(e, key)}
+                />
+                {/* 中点小圆：可点的提示，告诉你这条线有内容 */}
+                <circle
+                  cx={mx}
+                  cy={my}
+                  r={shown ? 4 : 3}
+                  fill="#c9a26d"
+                  fillOpacity={shown ? 1 : 0.6}
+                  style={{ cursor: 'pointer' }}
+                  onPointerDown={(e) => e.stopPropagation()}
+                  onClick={(e) => toggleLabel(e, key)}
+                />
+                {shown && l.label && (
+                  <text
+                    x={mx}
+                    y={my - 8}
+                    fill="#e0c79a"
+                    fontSize={12}
+                    textAnchor="middle"
+                    style={{ pointerEvents: 'none' }}
+                  >
                     {l.label}
                   </text>
                 )}
@@ -339,7 +439,7 @@ export function GraphPanel() {
         <span>
           <i style={{ background: COLOR.collapsed }} /> 已收拢
         </span>
-        <span className="dim">点子节点钻入 · 点中心回上层 · 滚轮缩放 · 拖拽排布</span>
+        <span className="dim">点子节点钻入 · 点中心回上层 · 点连线看关系 · 滚轮缩放 · 拖拽排布</span>
       </div>
     </div>
   )
