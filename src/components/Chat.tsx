@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react'
 import { useStore } from '../store'
 import { DirectionChips } from './DirectionChips'
 import { CollapsePrompt } from './CollapsePrompt'
+import { Markdown } from './Markdown'
 
 export function Chat() {
   const messages = useStore((s) => s.messages)
@@ -51,17 +52,23 @@ export function Chat() {
           </p>
         )}
 
-        {messages.map((m) => (
-          <div key={m.id} className={`msg ${m.role}`}>
-            {m.role === 'teacher' && <div className="who">老师</div>}
-            {m.content}
-          </div>
-        ))}
+        {messages.map((m) =>
+          m.role === 'teacher' ? (
+            <div key={m.id} className="msg teacher">
+              <div className="who">老师</div>
+              <Markdown>{m.content}</Markdown>
+            </div>
+          ) : (
+            <div key={m.id} className="msg user">
+              {m.content}
+            </div>
+          ),
+        )}
 
         {streaming !== null && (
           <div className="msg teacher">
             <div className="who">老师</div>
-            {streaming || '…'}
+            <Markdown>{streaming || '…'}</Markdown>
           </div>
         )}
 
