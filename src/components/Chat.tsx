@@ -4,7 +4,13 @@ import { DirectionChips } from './DirectionChips'
 import { CollapsePrompt } from './CollapsePrompt'
 import { Markdown } from './Markdown'
 
-export function Chat() {
+export function Chat({
+  sidebarOpen,
+  onToggleSidebar,
+}: {
+  sidebarOpen: boolean
+  onToggleSidebar: () => void
+}) {
   const messages = useStore((s) => s.messages)
   const streaming = useStore((s) => s.streaming)
   const thinking = useStore((s) => s.thinking)
@@ -31,6 +37,13 @@ export function Chat() {
   return (
     <div className="col">
       <div className="col-head">
+        <button
+          className="sidebar-toggle"
+          onClick={onToggleSidebar}
+          title={sidebarOpen ? '收起左侧图谱面板' : '展开左侧图谱面板'}
+        >
+          {sidebarOpen ? '隐藏图谱' : '显示图谱'}
+        </button>
         <span>对话</span>
         {thinking && <span className="spin">· 观察者在解读这一层…</span>}
         <button

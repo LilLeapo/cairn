@@ -42,6 +42,25 @@ button {
   height: 100%;
 }
 
+/* 折叠左侧图谱面板：对话栏铺满 */
+.app.sidebar-hidden {
+  grid-template-columns: 1fr;
+}
+
+.sidebar-toggle {
+  background: none;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  border-radius: 6px;
+  padding: 2px 10px;
+  font-size: 12px;
+  line-height: 1.7;
+}
+.sidebar-toggle:hover {
+  color: var(--text);
+  border-color: var(--accent);
+}
+
 .col {
   display: flex;
   flex-direction: column;

@@ -1,4 +1,4 @@
-import { useEffect } from 'react'
+import { useEffect, useState } from 'react'
 import { useStore } from './store'
 import { KeyGate } from './components/KeyGate'
 import { Breadcrumb } from './components/Breadcrumb'
@@ -10,6 +10,7 @@ export function App() {
   const ready = useStore((s) => s.ready)
   const settings = useStore((s) => s.settings)
   const init = useStore((s) => s.init)
+  const [showSidebar, setShowSidebar] = useState(true)
 
   useEffect(() => {
     void init()
@@ -19,15 +20,17 @@ export function App() {
   if (!settings) return <KeyGate />
 
   return (
-    <div className="app">
-      <div className="col">
-        <div className="col-head">
-          <Breadcrumb />
-          <ImportPanel />
+    <div className={`app${showSidebar ? '' : ' sidebar-hidden'}`}>
+      {showSidebar && (
+        <div className="col">
+          <div className="col-head">
+            <Breadcrumb />
+            <ImportPanel />
+          </div>
+          <GraphPanel />
         </div>
-        <GraphPanel />
-      </div>
-      <Chat />
+      )}
+      <Chat sidebarOpen={showSidebar} onToggleSidebar={() => setShowSidebar((v) => !v)} />
     </div>
   )
 }
