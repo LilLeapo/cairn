@@ -96,6 +96,24 @@ export function KeyGate() {
         placeholder={DEFAULTS[provider].base}
         autoComplete="off"
       />
+      <div className="row" style={{ marginTop: 6, gap: 8 }}>
+        <button
+          type="button"
+          className="btn ghost"
+          onClick={() =>
+            setBaseURL(
+              provider === 'anthropic'
+                ? `${location.origin}/api/anthropic`
+                : `${location.origin}/api/openai/v1`,
+            )
+          }
+        >
+          用本站代理（解决官方 CORS）
+        </button>
+      </div>
+      <p className="note">
+        官方 api.openai.com 不放行浏览器跨域。部署到 Cloudflare Pages 后，点此把请求改走同源代理（/api/…），即可直连官方端点；第三方 / 兼容端点无需代理。本地 dev 无此代理。
+      </p>
 
       <label>API Key（BYOK）</label>
       <input
