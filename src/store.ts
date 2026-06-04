@@ -9,6 +9,7 @@ import type {
 } from './types'
 import * as db from './db'
 import { streamTeacher, runObserver, type PathStep } from './llm'
+import { pull, pushNow, applySnapshot, schedulePush } from './sync'
 
 const ROOT_ID = 'root'
 
@@ -39,6 +40,10 @@ interface State {
   thinking: boolean // 观察者正在解读
   error: string | null
 
+  // 云同步：同步码只存本地（端到端加密口令），整图加密后镜像到 KV
+  syncCode: string | null
+  syncError: string | null
+
   init: () => Promise<void>
   setSettings: (s: Settings) => Promise<void>
   navigateTo: (id: string) => Promise<void>
@@ -47,6 +52,14 @@ interface State {
   applyDirection: (d: DirectionSuggestion, depthOverride?: 'subgraph' | 'inline') => Promise<void>
   collapseCurrent: (summary: string) => Promise<void>
   resetAll: () => Promise<void>
+  applySyncCode: (code: string) => Promise<void>
+  disableSync: () => Promise<void>
+}
+
+// 写操作后触发防抖上传（只在开了同步时）。同步是尽力而为，出错只记一条。
+function autoSync(get: () => State, set: (p: Partial<State>) => void) {
+  const code = get().syncCode
+  if (code) schedulePush(code, (msg) => set({ syncError: msg }))
 }
 
 async function buildPath(nodeId: string, all: GraphNode[]): Promise<GraphNode[]> {
@@ -77,9 +90,12 @@ export const useStore = create<State>((set, get) => ({
   streaming: null,
   thinking: false,
   error: null,
+  syncCode: null,
+  syncError: null,
 
   init: async () => {
     const settings = await db.loadSettings()
+    const syncCode = await db.getSyncCode()
 
     // 确保有根节点。根节点 = 整张图的入口，标题就叫"我在学的东西"，等第一条消息再说。
     let root = await db.getNode(ROOT_ID)
@@ -97,12 +113,35 @@ export const useStore = create<State>((set, get) => ({
       await db.putNode(root)
     }
 
+    // 新设备 / 本地是空图，且本机存了同步码 → 先从云端拉回整图再渲染
+    if (syncCode) {
+      try {
+        const [localMsgs, localNodes] = await Promise.all([db.getAllMessages(), db.getAllNodes()])
+        if (localMsgs.length === 0 && localNodes.length <= 1) {
+          const snap = await pull(syncCode)
+          if (snap) await applySnapshot(snap)
+        }
+      } catch (e) {
+        set({ syncError: e instanceof Error ? e.message : String(e) })
+      }
+    }
+
     const allNodes = await db.getAllNodes()
     const allLinks = await db.getAllLinks()
     const path = await buildPath(ROOT_ID, allNodes)
     const children = await db.getChildren(ROOT_ID)
     const messages = await db.getMessages(ROOT_ID)
-    set({ ready: true, settings, allNodes, allLinks, currentId: ROOT_ID, path, children, messages })
+    set({
+      ready: true,
+      settings,
+      syncCode,
+      allNodes,
+      allLinks,
+      currentId: ROOT_ID,
+      path,
+      children,
+      messages,
+    })
   },
 
   setSettings: async (s) => {
@@ -157,6 +196,7 @@ export const useStore = create<State>((set, get) => ({
     await db.putMessage(teacherMsg)
     const newMessages = [...get().messages, teacherMsg]
     set({ messages: newMessages, streaming: null, thinking: true })
+    autoSync(get, set)
 
     // 观察者循环：解读这一层，让图生长，提方向，判断该不该收
     void get().runObserverLoop(currentId, newMessages)
@@ -209,6 +249,7 @@ export const useStore = create<State>((set, get) => ({
       const allNodes = await db.getAllNodes()
       set({ allNodes, children: await db.getChildren(currentId) })
     }
+    autoSync(get, set)
   },
 
   collapseCurrent: async (summary) => {
@@ -230,6 +271,7 @@ export const useStore = create<State>((set, get) => ({
       const children = await db.getChildren(currentId)
       set({ path: await buildPath(currentId, allNodes), children })
     }
+    autoSync(get, set)
     void path
   },
 
@@ -238,6 +280,34 @@ export const useStore = create<State>((set, get) => ({
     set({ allNodes: [], allLinks: [], observer: null, messages: [], children: [] })
     await get().init()
     await get().navigateTo(ROOT_ID)
+  },
+
+  // 开启 / 连接云同步：填入同步码。云端已有快照就拉回（云为准）；没有就把本地播种上去。
+  applySyncCode: async (code) => {
+    const c = code.trim()
+    if (!c) return
+    await db.saveSyncCode(c)
+    set({ syncCode: c, syncError: null })
+    try {
+      const snap = await pull(c)
+      if (snap) {
+        await applySnapshot(snap)
+      } else {
+        await pushNow(c)
+      }
+      const allNodes = await db.getAllNodes()
+      const allLinks = await db.getAllLinks()
+      set({ allNodes, allLinks })
+      await get().navigateTo(ROOT_ID)
+    } catch (e) {
+      set({ syncError: e instanceof Error ? e.message : String(e) })
+    }
+  },
+
+  // 关闭云同步：只清掉本机的同步码，本地图原样保留。
+  disableSync: async () => {
+    await db.clearSyncCode()
+    set({ syncCode: null, syncError: null })
   },
 }))
 
@@ -314,4 +384,5 @@ async function applyObserver(
     children: await db.getChildren(nodeId),
     observer: get().currentId === nodeId ? observer : get().observer,
   })
+  autoSync(get, set)
 }

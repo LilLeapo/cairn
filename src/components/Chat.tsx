@@ -3,6 +3,7 @@ import { useStore } from '../store'
 import { DirectionChips } from './DirectionChips'
 import { CollapsePrompt } from './CollapsePrompt'
 import { Markdown } from './Markdown'
+import { SyncPanel } from './SyncPanel'
 
 export function Chat({
   sidebarOpen,
@@ -46,15 +47,17 @@ export function Chat({
         </button>
         <span>对话</span>
         {thinking && <span className="spin">· 观察者在解读这一层…</span>}
-        <button
-          className="linklike"
-          style={{ marginLeft: 'auto' }}
-          onClick={() => {
-            if (confirm('清空整张图和所有对话？key 会保留。')) void resetAll()
-          }}
-        >
-          清空
-        </button>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 12 }}>
+          <SyncPanel />
+          <button
+            className="linklike"
+            onClick={() => {
+              if (confirm('清空整张图和所有对话？key 会保留。')) void resetAll()
+            }}
+          >
+            清空
+          </button>
+        </div>
       </div>
 
       <div className="col-body" ref={bodyRef}>

@@ -88,8 +88,28 @@ export async function getMessages(nodeId: string): Promise<Message[]> {
   return all.sort((a, b) => a.createdAt - b.createdAt)
 }
 
+export async function getAllMessages(): Promise<Message[]> {
+  return (await db()).getAll('messages')
+}
+
 export async function putMessage(msg: Message): Promise<void> {
   await (await db()).put('messages', msg)
+}
+
+// 云同步用：把一份整图快照原样写回本地（拉取后恢复）。
+export async function importSnapshot(snapshot: {
+  nodes: GraphNode[]
+  links: CrossLink[]
+  messages: Message[]
+}): Promise<void> {
+  const d = await db()
+  const tx = d.transaction(['nodes', 'links', 'messages'], 'readwrite')
+  await Promise.all([
+    ...snapshot.nodes.map((n) => tx.objectStore('nodes').put(n)),
+    ...snapshot.links.map((l) => tx.objectStore('links').put(l)),
+    ...snapshot.messages.map((m) => tx.objectStore('messages').put(m)),
+    tx.done,
+  ])
 }
 
 // ---- settings (BYOK) ----
@@ -121,4 +141,19 @@ export async function clearAll(): Promise<void> {
     d.clear('links'),
     d.clear('messages'),
   ])
+}
+
+// ---- 同步码（云同步身份 + 端到端加密口令；只存本地，绝不上传）----
+
+export async function getSyncCode(): Promise<string | null> {
+  const code = (await db()).get('settings', 'syncCode')
+  return ((await code) as string | undefined) ?? null
+}
+
+export async function saveSyncCode(code: string): Promise<void> {
+  await (await db()).put('settings', code, 'syncCode')
+}
+
+export async function clearSyncCode(): Promise<void> {
+  await (await db()).delete('settings', 'syncCode')
 }
